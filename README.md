@@ -1,0 +1,13 @@
+# Ask PDF Chatbot 🤖
+
+## Environment
+Install python dependencies
+```commandline
+pip install streamlit pypdf2 langchain python-dotenv faiss-cpu openai huggingface-hub
+```
+
+Add API key and token 
+```dotenv
+OPEN_API_KEY={}
+HUGGINGFACEHUB_API_TOKEN={}
+```
