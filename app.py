@@ -3,7 +3,7 @@ from typing import List
 import streamlit as st
 from dotenv import load_dotenv
 from PyPDF2 import PdfReader
-from langchain.text_splitter import CharacterTextSplitter
+from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain.embeddings import OpenAIEmbeddings, HuggingFaceBgeEmbeddings
 from langchain.embeddings.base import Embeddings
 from langchain.vectorstores import FAISS
@@ -11,10 +11,9 @@ from langchain.vectorstores.base import VectorStore
 from langchain.memory import ConversationBufferMemory
 from langchain.chains import ConversationalRetrievalChain
 from langchain.chat_models import ChatOpenAI
-from langchain.llms import HuggingFaceHub
+from langchain.llms import HuggingFaceHub, CTransformers
 
 from static.htmlTemplates import css, bot_template, user_template
-
 
 def get_pdfs_text(pdfs) -> str:
     return ''.join([get_pdf_text(pdf) for pdf in pdfs])
@@ -26,8 +25,7 @@ def get_pdf_text(pdf) -> str:
 
 
 def get_text_chunks(raw_text) -> List[str]:
-    text_splitter = CharacterTextSplitter(
-        separator="\n",
+    text_splitter = RecursiveCharacterTextSplitter(
         chunk_size=1000,
         chunk_overlap=200,
         length_function=len
@@ -49,12 +47,27 @@ def get_vectorstore(text_chunks: List[str]) -> VectorStore:
     return vectorstore
 
 
+def get_llm(source):
+    if source == "openai":
+        return ChatOpenAI()
+    elif source == "huggingface":
+        return HuggingFaceHub(
+            repo_id="google/flan-t5-xxl",
+            model_kwargs={"temperature": 0.5, "max_length": 2048}
+        )
+    elif source == "local":
+        return CTransformers(model="llama-2-7b.ggmlv3.q4_0.bin",
+                             model_type="llama",
+                             config={'max_new_tokens': 128,
+                                     'temperature': 0.01})
+
+    return CTransformers(model="llama-2-7b.ggmlv3.q4_0.bin",
+                         model_type="llama",
+                         config={'max_new_tokens': 128, 'temperature': 0.01})
+
+
 def get_conversation_chain(vectorstore: VectorStore):
-    # llm = ChatOpenAI()
-    llm = HuggingFaceHub(
-        repo_id="google/flan-t5-xxl",
-        model_kwargs={"temperature": 0.5, "max_length": 2048}
-    )
+    llm = get_llm(source="openai")
 
     memory = ConversationBufferMemory(
         memory_key="chat_history",
